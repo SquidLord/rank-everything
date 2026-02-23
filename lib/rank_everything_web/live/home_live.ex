@@ -17,7 +17,7 @@ defmodule RankEverythingWeb.HomeLive do
           <form phx-submit="start_ranking" class="space-y-4 text-left">
             <div>
               <label class="block text-sm font-medium text-zinc-300 mb-1">Session Name</label>
-              <input type="text" name="name" required placeholder="My Awesome Ranking" class="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors" />
+              <input type="text" name="name" placeholder="My Awesome Ranking" class="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors" />
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
