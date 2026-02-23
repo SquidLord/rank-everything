@@ -4,6 +4,7 @@ defmodule RankEverythingWeb.HomeLive do
 
   def render(assigns) do
     ~H"""
+    <.flash_group flash={@flash} />
     <div class="min-h-screen w-full flex flex-col items-center bg-zinc-900 text-zinc-100 p-6">
       <div class="max-w-3xl w-full text-center space-y-8 mt-12">
         <div>

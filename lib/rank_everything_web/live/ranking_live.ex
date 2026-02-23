@@ -25,6 +25,7 @@ defmodule RankEverythingWeb.RankingLive do
 
   def render(assigns) do
     ~H"""
+    <.flash_group flash={@flash} />
     <div class="h-screen w-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-100 p-6">
       
       <%= if Map.get(assigns, :loading) do %>
