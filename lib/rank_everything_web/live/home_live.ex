@@ -14,19 +14,29 @@ defmodule RankEverythingWeb.HomeLive do
         </div>
 
         <div class="glass p-8 rounded-2xl border border-zinc-800 bg-zinc-800/50 backdrop-blur-sm shadow-xl space-y-6">
-          <form phx-submit="create_from_url" class="space-y-4 text-left">
+          <form phx-submit="start_ranking" class="space-y-4 text-left">
             <div>
               <label class="block text-sm font-medium text-zinc-300 mb-1">Session Name</label>
               <input type="text" name="name" required placeholder="My Awesome Ranking" class="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors" />
             </div>
             
-            <div>
-              <label class="block text-sm font-medium text-zinc-300 mb-1">Import from URL (Wikipedia, Listicle, etc.)</label>
-              <input type="url" name="url" required placeholder="https://en.wikipedia.org/wiki/..." class="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors" />
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-zinc-300 mb-1">Items to Rank (One per line)</label>
+                <textarea name="items_text" rows="4" placeholder="Apples\nBananas\nCherries" class="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors"></textarea>
+              </div>
+              
+              <div>
+                <label class="block text-sm font-medium text-zinc-300 mb-1">OR Import from URL</label>
+                <input type="url" name="url" placeholder="https://en.wikipedia.org/wiki/..." class="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors" />
+                <div class="text-xs text-zinc-500 mt-2">
+                  Leave URL blank if typing items manually.
+                </div>
+              </div>
             </div>
             
             <button type="submit" class="w-full py-4 text-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-black rounded-lg transition-all transform hover:scale-[1.02] shadow-lg shadow-emerald-500/20">
-              Import & Start Ranking
+              Start Ranking
             </button>
           </form>
           
@@ -86,12 +96,31 @@ defmodule RankEverythingWeb.HomeLive do
     {:ok, assign(socket, sessions: sessions)}
   end
 
-  def handle_event("create_from_url", %{"name" => name, "url" => url}, socket) do
-    case RankEverything.create_ranking_from_url(name, url) do
-      {:ok, id} ->
-        {:noreply, push_navigate(socket, to: ~p"/rank/#{id}")}
-      {:error, reason} ->
-        {:noreply, put_flash(socket, :error, "Failed to import: #{reason}")}
+  def handle_event("start_ranking", %{"name" => name, "url" => url, "items_text" => text}, socket) do
+    # Determine which path to take
+    url = String.trim(url)
+    text = String.trim(text)
+    
+    cond do
+      url != "" ->
+        case RankEverything.create_ranking_from_url(name, url) do
+          {:ok, id} ->
+            {:noreply, push_navigate(socket, to: ~p"/rank/#{id}")}
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to import from URL: #{reason}")}
+        end
+        
+      text != "" ->
+        items = String.split(text, "\n") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+        case RankEverything.create_ranking_from_list(name, items) do
+          {:ok, id} ->
+            {:noreply, push_navigate(socket, to: ~p"/rank/#{id}")}
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to create: #{reason}")}
+        end
+        
+      true ->
+        {:noreply, put_flash(socket, :error, "Please enter either items to rank OR a URL to import from.")}
     end
   end
 

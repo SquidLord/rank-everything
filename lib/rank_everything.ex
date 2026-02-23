@@ -31,6 +31,33 @@ defmodule RankEverything do
     end
   end
   
+  @doc """
+  Starts a new ranking session with the given name and a raw list of strings.
+  """
+  def create_ranking_from_list(name, list_of_strings) when is_list(list_of_strings) do
+    if length(list_of_strings) < 2 do
+      {:error, "You must provide at least two items to rank."}
+    else
+      items = 
+        list_of_strings
+        |> Enum.with_index()
+        |> Enum.map(fn {item_name, idx} ->
+          %{
+            id: Integer.to_string(idx + 1),
+            name: item_name
+          }
+        end)
+        
+      id = generate_id()
+      args = %{id: id, name: name, items: items}
+      
+      case SessionSup.start_session(args) do
+        {:ok, _pid} -> {:ok, id}
+        {:error, reason} -> {:error, reason}
+      end
+    end
+  end
+  
   def create_demo_ranking(name) do
     id = generate_id()
     items = [
