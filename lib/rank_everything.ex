@@ -44,16 +44,7 @@ defmodule RankEverything do
       {:error, reason} -> {:error, reason}
     end
   end
-    
-    # Start the session
-    # We pass id, name, items to the Session GenServer
-    args = %{id: id, name: name, items: items}
-    
-    case SessionSup.start_session(args) do
-      {:ok, _pid} -> {:ok, id}
-      {:error, reason} -> {:error, reason}
-    end
-  end
+
 
   @doc """
   Stops and removes a ranking session.
