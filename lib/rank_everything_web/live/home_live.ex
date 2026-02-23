@@ -96,10 +96,11 @@ defmodule RankEverythingWeb.HomeLive do
     {:ok, assign(socket, sessions: sessions)}
   end
 
-  def handle_event("start_ranking", %{"name" => name, "url" => url, "items_text" => text}, socket) do
+  def handle_event("start_ranking", params, socket) do
     # Determine which path to take
-    url = String.trim(url)
-    text = String.trim(text)
+    name = Map.get(params, "name", "Unnamed Session")
+    url = Map.get(params, "url", "") |> String.trim()
+    text = Map.get(params, "items_text", "") |> String.trim()
     
     cond do
       url != "" ->

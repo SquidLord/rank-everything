@@ -14,7 +14,10 @@ defmodule RankEverything.Importer do
     # Basic URL validation could go here
     case Req.get(url, redirect: true, max_redirects: 5) do
       {:ok, %{status: 200, body: html}} ->
-        parse_html(html)
+        case extract_obsidian_markdown_url(html) do
+          {:ok, md_url} -> fetch_and_parse_obsidian(md_url)
+          :error -> parse_html(html)
+        end
         
       {:ok, %{status: status}} ->
         {:error, "HTTP Error: #{status}"}
@@ -25,7 +28,48 @@ defmodule RankEverything.Importer do
     end
   end
 
-  defp parse_html(html) do
+  @doc false
+  def extract_obsidian_markdown_url(html) do
+    # Looks for window.preloadPage=f("https://publish-01.obsidian.md/access/...md");
+    case Regex.run(~r/window\.preloadPage\s*=\s*f\(\s*"([^"]+)"\s*\)/, html) do
+      [_, md_url] -> {:ok, md_url}
+      _ -> :error
+    end
+  end
+
+  defp fetch_and_parse_obsidian(md_url) do
+    Logger.debug("Detected Obsidian Publish. Fetching raw Markdown from: #{md_url}")
+    case Req.get(md_url, redirect: true, max_redirects: 5) do
+      {:ok, %{status: 200, body: text}} ->
+        parse_obsidian_markdown(text)
+      _error ->
+        {:error, "Failed to fetch Obsidian Publish Markdown content."}
+    end
+  end
+
+  @doc false
+  def parse_obsidian_markdown(text) do
+    items = 
+      text
+      |> String.split(["\n", "\r\n"])
+      |> Enum.map(&String.trim/1)
+      # Match standard markdown lists: - item, * item, 1. item
+      |> Enum.filter(fn line -> String.match?(line, ~r/^(\s*[-*]|\s*\d+\.)\s+(.+)$/) end)
+      |> Enum.map(fn line -> 
+        [_, _, content] = Regex.run(~r/^(\s*[-*]|\s*\d+\.)\s+(.+)$/, line)
+        String.trim(content)
+      end)
+      |> Enum.reject(&(&1 == ""))
+      
+    if items == [] do
+      {:error, "Found Obsidian Publish page, but it did not contain any bulleted or numbered lists."}
+    else
+      format_items(items)
+    end
+  end
+
+  @doc false
+  def parse_html(html) do
     case Floki.parse_document(html) do
       {:ok, document} ->
         # Find candidates
