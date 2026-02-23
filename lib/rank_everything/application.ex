@@ -14,6 +14,7 @@ defmodule RankEverything.Application do
       
       # Session Management Services
       {Registry, keys: :unique, name: RankEverything.SessionRegistry},
+      RankEverything.Persistence,
       RankEverything.Session.Supervisor,
       RankEverything.Tracking, # Listens to session creates/updates
 

@@ -30,18 +30,20 @@ defmodule RankEverything.Session do
 
   @impl true
   def init(%{id: id, name: name, items: items}) do
+    # Try to load existing session from disk, or create new
+    state = 
+      case RankEverything.Persistence.load_session(id) do
+        {:ok, loaded_state} -> 
+          loaded_state
+        _ ->
+          sorter = Sorter.new(items)
+          new_state = %{id: id, name: name, sorter: sorter}
+          RankEverything.Persistence.save_session(new_state)
+          new_state
+      end
+      
     # Register with Tracking
-    Tracking.register_session(id, name)
-    
-    # Initialize Sorter
-    sorter = Sorter.new(items)
-    
-    # Initial state
-    state = %{
-      id: id,
-      name: name,
-      sorter: sorter
-    }
+    Tracking.register_session(state.id, state.name)
     
     # Broadcast initial state
     broadcast_change(state)
@@ -54,9 +56,15 @@ defmodule RankEverything.Session do
     new_sorter = Sorter.vote(state.sorter, decision)
     new_state = %{state | sorter: new_sorter}
     
-    # Update progress in Tracking if changed? 
-    # Sorter doesn't expose progress % yet, but we could calc it.
-    # For now, just broadcast.
+    # Save the updated state to disk
+    RankEverything.Persistence.save_session(new_state)
+    
+    # Update progress in Tracking if finished
+    if new_sorter.status == :finished do
+      Tracking.update_progress(state.id, 1.0)
+    end
+    
+    # Broadcast
     broadcast_change(new_state)
     
     {:reply, :ok, new_state}
@@ -69,8 +77,8 @@ defmodule RankEverything.Session do
 
   @impl true
   def terminate(_reason, state) do
-    # Ensure we clean up the tracking list
-    Tracking.remove_session(state.id)
+    # We do NOT remove the session from Tracking here because we want it to persist.
+    # The session is temporary in memory, but permanent on disk until explicitly deleted.
     :ok
   end
 

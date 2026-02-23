@@ -14,12 +14,26 @@ defmodule RankEverythingWeb.HomeLive do
         </div>
 
         <div class="glass p-8 rounded-2xl border border-zinc-800 bg-zinc-800/50 backdrop-blur-sm shadow-xl space-y-6">
-          <button phx-click="create" class="w-full py-4 text-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-black rounded-lg transition-all transform hover:scale-[1.02] shadow-lg shadow-emerald-500/20">
-            Start New Ranking
-          </button>
+          <form phx-submit="create_from_url" class="space-y-4 text-left">
+            <div>
+              <label class="block text-sm font-medium text-zinc-300 mb-1">Session Name</label>
+              <input type="text" name="name" required placeholder="My Awesome Ranking" class="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors" />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-zinc-300 mb-1">Import from URL (Wikipedia, Listicle, etc.)</label>
+              <input type="url" name="url" required placeholder="https://en.wikipedia.org/wiki/..." class="w-full bg-zinc-900/50 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 transition-colors" />
+            </div>
+            
+            <button type="submit" class="w-full py-4 text-xl font-bold bg-emerald-500 hover:bg-emerald-400 text-black rounded-lg transition-all transform hover:scale-[1.02] shadow-lg shadow-emerald-500/20">
+              Import & Start Ranking
+            </button>
+          </form>
           
-          <div class="text-xs text-zinc-500">
-            Click here to create a demo ranking session.
+          <div class="pt-4 border-t border-zinc-700">
+            <button phx-click="create_demo" class="w-full py-3 text-sm font-bold bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg transition-all">
+              Or Create a Quick Demo
+            </button>
           </div>
         </div>
         
@@ -72,8 +86,17 @@ defmodule RankEverythingWeb.HomeLive do
     {:ok, assign(socket, sessions: sessions)}
   end
 
-  def handle_event("create", _params, socket) do
-    case RankEverything.create_ranking("Demo Ranking #{:rand.uniform(1000)}") do
+  def handle_event("create_from_url", %{"name" => name, "url" => url}, socket) do
+    case RankEverything.create_ranking_from_url(name, url) do
+      {:ok, id} ->
+        {:noreply, push_navigate(socket, to: ~p"/rank/#{id}")}
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to import: #{reason}")}
+    end
+  end
+
+  def handle_event("create_demo", _params, socket) do
+    case RankEverything.create_demo_ranking("Demo Ranking #{:rand.uniform(1000)}") do
       {:ok, id} ->
         {:noreply, push_navigate(socket, to: ~p"/rank/#{id}")}
       {:error, _reason} ->

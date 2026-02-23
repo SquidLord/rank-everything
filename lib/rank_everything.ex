@@ -11,18 +11,39 @@ defmodule RankEverything do
   alias RankEverything.Session.Supervisor, as: SessionSup
 
   @doc """
-  Starts a new ranking session with the given name and list of items.
-  Returns {:ok, id}
+  Starts a new ranking session with the given name and URL.
+  If the URL is valid, it imports items.
+  Returns {:ok, id} or {:error, reason}
   """
-  def create_ranking(name) do
+  def create_ranking_from_url(name, url) do
+    case RankEverything.Importer.import_from_url(url) do
+      {:ok, items} ->
+        id = generate_id()
+        args = %{id: id, name: name, items: items}
+        
+        case SessionSup.start_session(args) do
+          {:ok, _pid} -> {:ok, id}
+          {:error, reason} -> {:error, reason}
+        end
+        
+      {:error, _reason} = err -> 
+        err
+    end
+  end
+  
+  def create_demo_ranking(name) do
     id = generate_id()
-    
-    # Placeholder items for now - we will add input parsing later
     items = [
       %{id: "1", name: "Option A"},
       %{id: "2", name: "Option B"},
       %{id: "3", name: "Option C"}
     ]
+    args = %{id: id, name: name, items: items}
+    case SessionSup.start_session(args) do
+      {:ok, _pid} -> {:ok, id}
+      {:error, reason} -> {:error, reason}
+    end
+  end
     
     # Start the session
     # We pass id, name, items to the Session GenServer

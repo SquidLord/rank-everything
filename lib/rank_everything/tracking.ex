@@ -34,8 +34,23 @@ defmodule RankEverything.Tracking do
 
   @impl true
   def init(_) do
-    # State is a Map: id -> %{id: id, name: name, progress: 0.0}
-    {:ok, %{}}
+    # Load from disk
+    saved_ids = RankEverything.Persistence.list_saved_sessions()
+    
+    state = 
+      Enum.reduce(saved_ids, %{}, fn id, acc ->
+        case RankEverything.Persistence.load_session(id) do
+          {:ok, session} ->
+            # Calculate progress here, or assume Sorter has a progress helper. For now we use 0.0 unless finished.
+            progress = if session.sorter && session.sorter.status == :finished, do: 1.0, else: 0.0
+            entry = %{id: id, name: session.name, progress: progress}
+            Map.put(acc, id, entry)
+            
+          _ -> acc
+        end
+      end)
+      
+    {:ok, state}
   end
 
   @impl true
@@ -68,6 +83,7 @@ defmodule RankEverything.Tracking do
   @impl true
   def handle_cast({:remove, id}, state) do
     new_state = Map.delete(state, id)
+    RankEverything.Persistence.delete_session(id)
     broadcast_update(new_state)
     {:noreply, new_state}
   end
